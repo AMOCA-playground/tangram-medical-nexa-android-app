@@ -26,6 +26,7 @@ import demo.nexa.clinical_transcription_demo.presentation.MainViewModel
 import demo.nexa.clinical_transcription_demo.presentation.RecordingViewModel
 import demo.nexa.clinical_transcription_demo.ui.component.LoadingOverlay
 import demo.nexa.clinical_transcription_demo.ui.screen.MedicalAssistantChatScreen
+import demo.nexa.clinical_transcription_demo.ui.screen.MedicalEntriesScreen
 import demo.nexa.clinical_transcription_demo.ui.screen.NoteDetailScreen
 import demo.nexa.clinical_transcription_demo.ui.screen.NotesListScreen
 import demo.nexa.clinical_transcription_demo.ui.screen.RecordingScreen
@@ -47,9 +48,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var showRecording by remember { mutableStateOf(false) }
-                    var showSoapNote by remember { mutableStateOf(false) }
-                    var showChat by remember { mutableStateOf(false) }
+                    var currentScreen by remember { mutableStateOf<Screen>(Screen.NotesList) }
                     var recordingSessionKey by remember { mutableStateOf(0) }
                     var selectedNoteId by remember { mutableStateOf<String?>(null) }
                     val mainViewModel: MainViewModel = viewModel()
@@ -81,50 +80,66 @@ class MainActivity : ComponentActivity() {
                     }
                     
                     Box(modifier = Modifier.fillMaxSize()) {
-                        when {
-                            showRecording -> {
+                        when (currentScreen) {
+                            Screen.Recording -> {
                                 val recordingViewModel: RecordingViewModel = viewModel(key = recordingSessionKey.toString())
                                 RecordingScreen(
                                     viewModel = recordingViewModel,
-                                    onBackClick = { showRecording = false },
+                                    onBackClick = { currentScreen = Screen.NotesList },
                                     onRecordingSaved = { 
-                                        showRecording = false
+                                        currentScreen = Screen.NotesList
                                     }
                                 )
                             }
-                            showSoapNote -> {
+                            Screen.SoapNote -> {
                                 SoapScreen()
                             }
-                            showChat -> {
+                            Screen.Chat -> {
                                 MedicalAssistantChatScreen(
-                                    onBackClick = { showChat = false }
+                                    onBackClick = { currentScreen = Screen.NotesList }
                                 )
                             }
-                            selectedNoteId != null -> {
-                                NoteDetailScreen(
-                                    noteId = selectedNoteId!!,
-                                    onBackClick = { selectedNoteId = null }
+                            Screen.MedicalRecords -> {
+                                MedicalEntriesScreen(
+                                    onBackClick = { currentScreen = Screen.NotesList }
                                 )
                             }
-                            else -> {
+                            Screen.NoteDetail -> {
+                                selectedNoteId?.let { id ->
+                                    NoteDetailScreen(
+                                        noteId = id,
+                                        onBackClick = { 
+                                            currentScreen = Screen.NotesList
+                                            selectedNoteId = null 
+                                        }
+                                    )
+                                } ?: run { currentScreen = Screen.NotesList }
+                            }
+                            Screen.NotesList -> {
                                 NotesListScreen(
                                     notes = notes,
-                                    onNoteClick = { note -> selectedNoteId = note.id },
+                                    onNoteClick = { note -> 
+                                        selectedNoteId = note.id
+                                        currentScreen = Screen.NoteDetail
+                                    },
                                     onRecordClick = { 
                                         recordingSessionKey++
-                                        showRecording = true 
+                                        currentScreen = Screen.Recording 
                                     },
                                     onImportClick = { 
                                         importLauncher.launch("audio/*")
                                     },
                                     onChatClick = {
-                                        showChat = true
+                                        currentScreen = Screen.Chat
+                                    },
+                                    onMedicalRecordsClick = {
+                                        currentScreen = Screen.MedicalRecords
                                     },
                                     onTestAsrClick = {
                                         startActivity(Intent(this@MainActivity, TestAsrActivity::class.java))
                                     },
                                     onTestLlmClick = { 
-                                        showSoapNote = true
+                                        currentScreen = Screen.SoapNote
                                      }
                                 )
                             }
@@ -137,5 +152,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private sealed class Screen {
+        object NotesList : Screen()
+        object Recording : Screen()
+        object SoapNote : Screen()
+        object Chat : Screen()
+        object MedicalRecords : Screen()
+        object NoteDetail : Screen()
     }
 }

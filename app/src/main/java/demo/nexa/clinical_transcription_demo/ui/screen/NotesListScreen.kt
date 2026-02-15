@@ -23,8 +23,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +42,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,6 +70,7 @@ fun NotesListScreen(
     onRecordClick: () -> Unit,
     onImportClick: () -> Unit,
     onChatClick: () -> Unit,
+    onMedicalRecordsClick: () -> Unit,
     onTestAsrClick: (() -> Unit)? = null,
     onTestLlmClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -162,7 +167,7 @@ fun NotesListScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
                         Text(
@@ -178,6 +183,32 @@ fun NotesListScreen(
                             color = AppColors.TextSecondary,
                             letterSpacing = 0.5.sp
                         )
+                    }
+                    
+                    // Medical Records Button
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(AppColors.TealDark.copy(alpha = 0.1f))
+                            .clickable(onClick = onMedicalRecordsClick)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = AppColors.TealDark
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Records",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TealDark
+                            )
+                        }
                     }
                 }
 
@@ -378,7 +409,8 @@ private fun NotesListScreenPreview() {
             onNoteClick = {},
             onRecordClick = {},
             onImportClick = {},
-            onChatClick = {}
+            onChatClick = {},
+            onMedicalRecordsClick = {}
         )
     }
 }
