@@ -1,0 +1,11 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.ClinicalTranscriptionDemo" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/teal_primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/teal_light</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Theme.ClinicalTranscriptionDemo" parent="Base.Theme.ClinicalTranscriptionDemo" />
+</resources>
