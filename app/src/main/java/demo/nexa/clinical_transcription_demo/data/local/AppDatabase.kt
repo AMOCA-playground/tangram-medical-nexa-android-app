@@ -4,8 +4,12 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import demo.nexa.clinical_transcription_demo.data.local.dao.ChatConversationDao
+import demo.nexa.clinical_transcription_demo.data.local.dao.ChatMessageDao
 import demo.nexa.clinical_transcription_demo.data.local.dao.MedicalEntryDao
 import demo.nexa.clinical_transcription_demo.data.local.dao.RecordingNoteDao
+import demo.nexa.clinical_transcription_demo.data.local.entity.ChatConversationEntity
+import demo.nexa.clinical_transcription_demo.data.local.entity.ChatMessageEntity
 import demo.nexa.clinical_transcription_demo.data.local.entity.MedicalEntryEntity
 import demo.nexa.clinical_transcription_demo.data.local.entity.RecordingNoteEntity
 
@@ -13,15 +17,22 @@ import demo.nexa.clinical_transcription_demo.data.local.entity.RecordingNoteEnti
  * Room database for the clinical transcription app.
  */
 @Database(
-    entities = [RecordingNoteEntity::class, MedicalEntryEntity::class],
-    version = 4,
+    entities = [
+        RecordingNoteEntity::class,
+        MedicalEntryEntity::class,
+        ChatConversationEntity::class,
+        ChatMessageEntity::class
+    ],
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     
     abstract fun recordingNoteDao(): RecordingNoteDao
     abstract fun medicalEntryDao(): MedicalEntryDao
-    
+    abstract fun chatConversationDao(): ChatConversationDao
+    abstract fun chatMessageDao(): ChatMessageDao
+
     companion object {
         private const val DATABASE_NAME = "clinical_transcription_db"
         

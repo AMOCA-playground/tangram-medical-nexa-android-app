@@ -25,7 +25,7 @@ import demo.nexa.clinical_transcription_demo.data.repository.NotesRepository
 import demo.nexa.clinical_transcription_demo.presentation.MainViewModel
 import demo.nexa.clinical_transcription_demo.presentation.RecordingViewModel
 import demo.nexa.clinical_transcription_demo.ui.component.LoadingOverlay
-import demo.nexa.clinical_transcription_demo.ui.screen.MedicalAssistantChatScreen
+import demo.nexa.clinical_transcription_demo.ui.screen.ChatHomeScreen
 import demo.nexa.clinical_transcription_demo.ui.screen.MedicalEntriesScreen
 import demo.nexa.clinical_transcription_demo.ui.screen.NoteDetailScreen
 import demo.nexa.clinical_transcription_demo.ui.screen.NotesListScreen
@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var currentScreen by remember { mutableStateOf<Screen>(Screen.NotesList) }
+                    var currentScreen by remember { mutableStateOf<Screen>(Screen.Chat) }
                     var recordingSessionKey by remember { mutableStateOf(0) }
                     var selectedNoteId by remember { mutableStateOf<String?>(null) }
                     val mainViewModel: MainViewModel = viewModel()
@@ -85,9 +85,9 @@ class MainActivity : ComponentActivity() {
                                 val recordingViewModel: RecordingViewModel = viewModel(key = recordingSessionKey.toString())
                                 RecordingScreen(
                                     viewModel = recordingViewModel,
-                                    onBackClick = { currentScreen = Screen.NotesList },
-                                    onRecordingSaved = { 
-                                        currentScreen = Screen.NotesList
+                                    onBackClick = { currentScreen = Screen.Chat },
+                                    onRecordingSaved = {
+                                        currentScreen = Screen.Chat
                                     }
                                 )
                             }
@@ -95,13 +95,17 @@ class MainActivity : ComponentActivity() {
                                 SoapScreen()
                             }
                             Screen.Chat -> {
-                                MedicalAssistantChatScreen(
-                                    onBackClick = { currentScreen = Screen.NotesList }
+                                ChatHomeScreen(
+                                    onNotesClick = { currentScreen = Screen.NotesList },
+                                    onRecordClick = {
+                                        recordingSessionKey++
+                                        currentScreen = Screen.Recording
+                                    }
                                 )
                             }
                             Screen.MedicalRecords -> {
                                 MedicalEntriesScreen(
-                                    onBackClick = { currentScreen = Screen.NotesList }
+                                    onBackClick = { currentScreen = Screen.Chat }
                                 )
                             }
                             Screen.NoteDetail -> {
@@ -113,7 +117,7 @@ class MainActivity : ComponentActivity() {
                                             selectedNoteId = null 
                                         }
                                     )
-                                } ?: run { currentScreen = Screen.NotesList }
+                                } ?: run { currentScreen = Screen.Chat }
                             }
                             Screen.NotesList -> {
                                 NotesListScreen(

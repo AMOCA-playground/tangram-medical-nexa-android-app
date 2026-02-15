@@ -6,7 +6,7 @@ import com.nexa.sdk.NexaSdk
 
 /**
  * Application subclass for one-time initialization.
- * Initializes Nexa SDK runtime (shared by ASR and LLM modules).
+ * Initializes Nexa SDK runign time (shared by ASR and LLM modules).
  */
 class ClinicalApp : Application() {
     
