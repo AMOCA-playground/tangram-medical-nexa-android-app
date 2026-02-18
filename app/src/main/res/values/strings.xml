@@ -30,6 +30,7 @@
     <string name="priority_routine">Routine</string>
     <string name="source_recorded">Recorded</string>
     <string name="source_imported">Imported</string>
+    <string name="source_text">Text</string>
     <string name="status_new">New</string>
     <string name="status_transcribing">Transcribing</string>
     <string name="status_summarizing">Summarizing</string>

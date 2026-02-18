@@ -2,7 +2,6 @@ package demo.nexa.clinical_transcription_demo.ui.component
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -12,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Edit
@@ -26,38 +23,52 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.currentBackStackEntryAsState
 import demo.nexa.clinical_transcription_demo.ui.theme.AppColors
 
 /**
  * Navigation item for bottom bar.
  */
-data class BottomNavItem(
-    val id: String,
+sealed class BottomNavItem(
+    val route: String,
     val label: String,
     val icon: ImageVector,
     val contentDescription: String
-)
+) {
+    object Chat : BottomNavItem("chat", "Chat", Icons.Filled.Chat, "Chat Home")
+    object Record : BottomNavItem("recording", "Record", Icons.Filled.Mic, "Record Audio")
+    object Notes : BottomNavItem("notes_list", "Notes", Icons.Filled.Edit, "View Notes")
+    object Settings : BottomNavItem("settings", "Settings", Icons.Filled.Settings, "Settings")
+}
 
 /**
- * Bottom Navigation Bar for frequent features.
+ * Modern Bottom Navigation Bar for frequent features.
  * Replaces FABs with a persistent, accessible navigation bar.
- *
- * @param items Navigation items to display
- * @param selectedItemId Currently selected item ID
- * @param onItemSelected Callback when user selects an item
- * @param modifier Modifier for styling
  */
 @Composable
 fun AppBottomNavigationBar(
-    items: List<BottomNavItem>,
-    selectedItemId: String,
-    onItemSelected: (String) -> Unit,
+    navController: NavController,
     modifier: Modifier = Modifier
 ) {
+    val items = listOf(
+        BottomNavItem.Chat,
+        BottomNavItem.Record,
+        BottomNavItem.Notes,
+        BottomNavItem.Settings
+    )
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -77,10 +88,26 @@ fun AppBottomNavigationBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         items.forEach { item ->
+            val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+            
             BottomNavBarItem(
                 item = item,
-                isSelected = item.id == selectedItemId,
-                onClick = { onItemSelected(item.id) }
+                isSelected = isSelected,
+                onClick = {
+                    navController.navigate(item.route) {
+                        // Pop up to the start destination of the graph to
+                        // avoid building up a large stack of destinations
+                        // on the back stack as users select items
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        // Avoid multiple copies of the same destination when
+                        // reselecting the same item
+                        launchSingleTop = true
+                        // Restore state when reselecting a previously selected item
+                        restoreState = true
+                    }
+                }
             )
         }
     }
@@ -107,7 +134,7 @@ private fun BottomNavBarItem(
 
     Column(
         modifier = Modifier
-            .size(width = 60.dp, height = 56.dp)
+            .size(width = 80.dp, height = 56.dp)
             .clickable(
                 onClick = onClick,
                 indication = null,
@@ -126,42 +153,10 @@ private fun BottomNavBarItem(
 
         Text(
             text = item.label,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium,
+            fontSize = 11.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             color = textColor,
-            modifier = Modifier.padding(top = 2.dp)
+            modifier = Modifier.padding(top = 4.dp)
         )
     }
-}
-
-/**
- * Create standard bottom navigation items.
- */
-object BottomNavigation {
-    fun defaultItems() = listOf(
-        BottomNavItem(
-            id = "chat",
-            label = "Chat",
-            icon = Icons.Filled.Chat,
-            contentDescription = "Chat Home"
-        ),
-        BottomNavItem(
-            id = "record",
-            label = "Record",
-            icon = Icons.Filled.Mic,
-            contentDescription = "Record Audio"
-        ),
-        BottomNavItem(
-            id = "notes",
-            label = "Notes",
-            icon = Icons.Filled.Edit,
-            contentDescription = "View Notes"
-        ),
-        BottomNavItem(
-            id = "settings",
-            label = "Settings",
-            icon = Icons.Filled.Settings,
-            contentDescription = "Settings"
-        )
-    )
 }

@@ -11,6 +11,7 @@ import demo.nexa.clinical_transcription_demo.common.formatDateForDisplay
 import demo.nexa.clinical_transcription_demo.data.audio.AudioFileManager
 import demo.nexa.clinical_transcription_demo.data.local.AppDatabase
 import demo.nexa.clinical_transcription_demo.data.repository.NotesRepository
+import demo.nexa.clinical_transcription_demo.domain.model.NoteSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,8 +28,8 @@ import java.util.Date
  */
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AppDatabase.getInstance(application)
-    private val audioFileManager = AudioFileManager(application)
-    private val repository = NotesRepository(database, audioFileManager, application)
+    private val audioFileManager = AudioFileManager.getInstance(application)
+    private val repository = NotesRepository.getInstance(application)
     private val contentResolver: ContentResolver = application.contentResolver
 
     private val _uiEvents = MutableSharedFlow<UiEvent>()
@@ -52,10 +53,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val title = generateImportTitle()
 
                 withContext(Dispatchers.IO) {
-                    repository.createImportedNote(
+                    repository.createNote(
                         title = title,
-                        sourceUri = uri,
-                        extension = extension,
+                        source = NoteSource.IMPORTED,
+                        audioUri = uri,
+                        audioExtension = extension,
                         durationMs = duration
                     )
                 }
@@ -65,6 +67,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _uiEvents.emit(UiEvent.ShowToast("Failed to import audio: ${e.message}"))
             } finally {
                 _isImporting.value = false
+            }
+        }
+    }
+
+    /**
+     * Create a new text-only note.
+     */
+    fun createTextNote(title: String, content: String) {
+        viewModelScope.launch {
+            try {
+                repository.createNote(
+                    title = title,
+                    source = NoteSource.TEXT,
+                    transcriptText = content
+                )
+                _uiEvents.emit(UiEvent.ShowToast("Text note created successfully"))
+            } catch (e: Exception) {
+                _uiEvents.emit(UiEvent.ShowToast("Failed to create text note: ${e.message}"))
             }
         }
     }

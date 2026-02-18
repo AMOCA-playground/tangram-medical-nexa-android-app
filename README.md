@@ -25,16 +25,13 @@ adb install clinical-transcription-demo.apk
 
 ### Prerequisites
 
-- **Git LFS**: This repository uses Git LFS for model files (except Qwen3). Install and set up Git LFS before cloning:
+- **Git LFS**: This repository uses Git LFS for model files. Install and set up Git LFS before cloning:
   ```bash
   git lfs install
   ```
 - **Android Studio** (latest stable version recommended)
 - **JDK 17** or higher
 - **Android SDK** with minimum API level 24 (Android 7.0) or higher
-- **Qwen3 4B GGUF model file**: Due to Git repo size limitations, the Qwen3 4B GGUF file is not included in this repository. You must download and place it manually:
-  1. Download `Qwen3-4B-Q4_K_M.gguf` from the [Qwen3 4B official GGUF repo](https://huggingface.co/Qwen/Qwen3-4B-GGUF/blob/main/Qwen3-4B-Q4_K_M.gguf)
-  2. Place the file at: `app/src/main/assets/nexa_models/Qwen3-4B-GGUF/Qwen3-4B-Q4_K_M.gguf`
 
 ### Build Instructions
 

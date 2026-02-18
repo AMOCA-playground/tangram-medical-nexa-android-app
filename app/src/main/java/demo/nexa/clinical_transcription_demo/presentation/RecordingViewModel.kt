@@ -8,6 +8,7 @@ import demo.nexa.clinical_transcription_demo.audio.AudioTranscoder
 import demo.nexa.clinical_transcription_demo.common.formatDateForFilename
 import demo.nexa.clinical_transcription_demo.data.audio.AudioFileManager
 import demo.nexa.clinical_transcription_demo.data.repository.NotesRepository
+import demo.nexa.clinical_transcription_demo.domain.model.NoteSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -171,9 +172,9 @@ class RecordingViewModel(application: Application) : AndroidViewModel(applicatio
                             val title = generateRecordingTitle()
                             val duration = _uiState.value.elapsedTimeMs
                             
-                            repository.createRecordedNote(
-                                id = noteId,
+                            repository.createNote(
                                 title = title,
+                                source = NoteSource.RECORDED,
                                 audioFile = audioInfo.file,
                                 durationMs = duration
                             )

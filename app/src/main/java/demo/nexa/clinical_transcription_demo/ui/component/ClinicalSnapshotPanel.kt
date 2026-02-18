@@ -152,6 +152,7 @@ fun ClinicalSnapshotPanel(
                     text = when (note.source) {
                         NoteSource.RECORDED -> stringResource(R.string.source_recorded)
                         NoteSource.IMPORTED -> stringResource(R.string.source_imported)
+                        NoteSource.TEXT -> stringResource(R.string.source_text)
                     },
                     fontSize = AppDimens.textSizeBody,
                     fontWeight = FontWeight.Medium,

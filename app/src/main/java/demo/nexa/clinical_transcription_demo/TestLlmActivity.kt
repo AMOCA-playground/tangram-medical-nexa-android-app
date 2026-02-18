@@ -20,9 +20,9 @@ import kotlin.system.measureTimeMillis
  * TestLlmActivity: LLM (Large Language Model) benchmarking tool
  *
  * PURPOSE:
- * Benchmarks two LLM models used in clinical transcription processing:
- * 1. Liquid Summarizer - Summarizes therapy session segments for SOAP note preparation
- * 2. Qwen SOAP Creator - Generates structured SOAP notes from session transcripts
+ * Benchmarks the LFM2.5-1.2B-Instruct-GGUF model used in clinical transcription processing:
+ * 1. LFM Summarizer - Summarizes therapy session segments for SOAP note preparation
+ * 2. LFM SOAP Creator - Generates structured SOAP notes from session transcripts
  *
  * The benchmark measures inference time per character across different input lengths (1000, 2000, 4000 chars)
  * to evaluate model performance and scalability.
@@ -34,17 +34,17 @@ import kotlin.system.measureTimeMillis
  * USAGE:
  * Launch this activity and tap "Start LLM Benchmark" to begin testing. The benchmark will:
  * - Load transcript.txt from assets (included in the repository)
- * - Test each model with multiple input lengths
+ * - Test the model with multiple input lengths for different tasks
  * - Run multiple iterations per length for statistical accuracy
  * - Display inference times, token counts, and average time per character
- * - Provide comparative summary of both models
+ * - Provide comparative summary of both tasks
  *
  * OUTPUT METRICS:
  * - Inference time (ms) per run
  * - Input character count (including system prompts)
  * - Output token count
  * - Time per character (ms/char) - primary performance metric
- * - Average performance across all runs per model
+ * - Average performance across all runs per task
  */
 class TestLlmActivity : AppCompatActivity() {
     
@@ -191,7 +191,7 @@ Return only the SOAP note. No explanations, no preamble, no post-notes."""
                 val soapResults = benchmarkTask(
                     llmEngine = llmEngine,
                     transcript = transcript,
-                    modelType = LlmModelManager.ModelType.QWEN_SOAP_CREATOR,
+                    modelType = LlmModelManager.ModelType.LFM_SOAP_CREATOR,
                     systemPrompt = soapPrompt,
                     taskName = "SOAP Creator"
                 )

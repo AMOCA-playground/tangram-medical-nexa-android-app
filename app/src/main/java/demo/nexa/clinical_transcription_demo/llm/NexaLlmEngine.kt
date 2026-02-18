@@ -52,9 +52,7 @@ private data class ModelLoadConfig(
 /**
  * Wrapper for Nexa SDK LLM functionality.
  * Handles LlmWrapper lifecycle and provides a clean suspend API for text generation.
- * Uses different plugins for two models:
- * - Liquid (LFM2.5-1.2B GGUF) for section summarization
- * - Qwen (Qwen3-4B GGUF) for SOAP note creation and medical assistant
+ * Uses LFM2.5-1.2B-Instruct-GGUF for both section summarization and SOAP note creation.
  */
 class NexaLlmEngine private constructor(
     private val context: Context,
@@ -73,7 +71,7 @@ class NexaLlmEngine private constructor(
      * Load a specific model and make it ready for use.
      * Destroys any currently loaded model before loading the new one.
      * 
-     * @param modelType Which model to load (Liquid or Qwen)
+     * @param modelType Which model to load
      * @throws IllegalStateException if model is not available
      * @throws Exception if LLM wrapper creation fails
      */
@@ -83,6 +81,8 @@ class NexaLlmEngine private constructor(
                 return@withLock
             }
             
+            // Note: Since both model types currently use the same file, we could optimize further
+            // but keeping this structure for future-proofing and simplicity.
             if (currentWrapper != null) {
                 currentWrapper?.destroy()
                 currentWrapper = null
@@ -100,26 +100,15 @@ class NexaLlmEngine private constructor(
                 throw IllegalStateException(message)
             }
             
+            val modelPath = modelManager.getLfmModelPath().absolutePath
             val modelConfig = when (modelType) {
-                LlmModelManager.ModelType.LIQUID_SUMMARIZER -> {
-                    val path = modelManager.getLiquidModelPath().absolutePath
-                    val name = ""
-                    val plugin = "cpu_gpu"
+                LlmModelManager.ModelType.LIQUID_SUMMARIZER,
+                LlmModelManager.ModelType.LFM_SOAP_CREATOR -> {
                     val cfg = ModelConfig(
                         nCtx = 8192,
                         nGpuLayers = 999
                     )
-                    ModelLoadConfig(path, name, plugin, cfg, "dev0")
-                }
-                LlmModelManager.ModelType.QWEN_SOAP_CREATOR -> {
-                    val path = modelManager.getQwenModelPath().absolutePath
-                    val name = ""
-                    val plugin = "cpu_gpu"
-                    val cfg = ModelConfig(
-                        nCtx = 8192,
-                        nGpuLayers = 999
-                    )
-                    ModelLoadConfig(path, name, plugin, cfg, "dev0")
+                    ModelLoadConfig(modelPath, "", "cpu_gpu", cfg, "dev0")
                 }
             }
             
@@ -149,11 +138,7 @@ class NexaLlmEngine private constructor(
      * Generate a SOAP note summary from a therapy session transcript.
      * Uses a two-stage process for long transcripts:
      * 1. Section summarizer (for transcripts >= 2000 chars): chunks into 2000-char segments and summarizes each
-     *    - Each segment takes ~1 minute expected completion time
-     *    - This stage accounts for the first 50% of progress
      * 2. SOAP creator: generates the final SOAP note from the summaries (or original transcript if short)
-     *    - Takes ~2 minutes expected completion time
-     *    - Accounts for the last 50% of progress (or 100% if no section summarization)
      * 
      * @param transcript The full therapy session transcript text
      * @return Flow emitting progress updates, text chunks, and completion/error events
@@ -180,9 +165,9 @@ class NexaLlmEngine private constructor(
             
             send(SoapGenerationResult.SoapCreatorStarted)
             
-            loadModel(LlmModelManager.ModelType.QWEN_SOAP_CREATOR)
+            loadModel(LlmModelManager.ModelType.LFM_SOAP_CREATOR)
             
-            val wrapper = currentWrapper ?: throw IllegalStateException("Failed to load Qwen model")
+            val wrapper = currentWrapper ?: throw IllegalStateException("Failed to load LFM model")
             
             val chatMessages = arrayListOf(
                 ChatMessage("system", SOAP_SYSTEM_PROMPT),
@@ -224,7 +209,7 @@ class NexaLlmEngine private constructor(
         messages: List<ChatMessage>
     ): Flow<LlmGenerationResult> = channelFlow {
         withContext(Dispatchers.IO) {
-            loadModel(LlmModelManager.ModelType.QWEN_SOAP_CREATOR)
+            loadModel(LlmModelManager.ModelType.LFM_SOAP_CREATOR)
             
             val wrapper = currentWrapper ?: throw IllegalStateException("Failed to load Medical Assistant model")
             
@@ -430,11 +415,10 @@ class NexaLlmEngine private constructor(
         
         /**
          * LLM inference speeds (measured from benchmarks).
-         * LFM2.5-1.2B (Summarizer): 5 ms/char
-         * Qwen3-4B (SOAP Creator): 27.5 ms/char
+         * LFM2.5-1.2B is much faster than Qwen.
          */
         const val SUMMARIZER_MS_PER_CHAR = 5.0
-        const val SOAP_CREATOR_MS_PER_CHAR = 27.5
+        const val SOAP_CREATOR_MS_PER_CHAR = 5.0
         
         /**
          * User message prefix for section summarization.

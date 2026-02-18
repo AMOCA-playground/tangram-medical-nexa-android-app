@@ -26,7 +26,7 @@ import java.util.UUID
 import kotlin.math.absoluteValue
 
 /**
- * Repository for managing recording notes.
+ * Repository for managing notes.
  * Thin layer over DAO + file operations.
  * 
  * Maintains its own coroutine scope for background work (transcription, summary generation)
@@ -68,43 +68,63 @@ class NotesRepository(
     suspend fun getNoteById(id: String): RecordingNote? {
         return dao.getById(id)?.toDomain()
     }
-    
-    /**
-     * Create a new note for a recording.
-     * Automatically extracts waveform data from the audio file.
-     * 
-     * @param id The note ID (must match the audio file base name)
-     * @param title Note title
-     * @param audioFile The audio file that was recorded (should be WAV)
-     * @param durationMs Duration in milliseconds (optional)
-     * @return The created note
-     */
-    suspend fun createRecordedNote(
-        id: String,
-        title: String,
-        audioFile: File,
-        durationMs: Long? = null
-    ): RecordingNote {
-        val now = System.currentTimeMillis()
 
-        val metadata = generateClinicalMetadata(id, now)
+    /**
+     * Create a new multifunctional note.
+     */
+    suspend fun createNote(
+        title: String,
+        source: NoteSource,
+        audioFile: File? = null,
+        audioUri: Uri? = null,
+        audioExtension: String = "m4a",
+        durationMs: Long? = null,
+        transcriptText: String? = null,
+        summaryText: String? = null
+    ): RecordingNote {
+        val noteId = if (source == NoteSource.RECORDED && audioFile != null) {
+            audioFile.nameWithoutExtension
+        } else {
+            UUID.randomUUID().toString()
+        }
         
-        // Extract waveform data from audio file (for playback visualization)
-        val waveformData = waveformExtractor.extractWaveform(audioFile, targetSampleCount = 200)
-            .getOrNull()
-        
+        val now = System.currentTimeMillis()
+        val metadata = generateClinicalMetadata(noteId, now)
+
+        var finalAudioFileName = ""
+        var finalWaveformData: List<Float>? = null
+
+        when (source) {
+            NoteSource.RECORDED -> {
+                if (audioFile != null) {
+                    finalAudioFileName = audioFile.name
+                    finalWaveformData = waveformExtractor.extractWaveform(audioFile, targetSampleCount = 200).getOrNull()
+                }
+            }
+            NoteSource.IMPORTED -> {
+                if (audioUri != null) {
+                    finalAudioFileName = audioFileManager.copyImportedAudio(audioUri, noteId, audioExtension)
+                    val importedFile = audioFileManager.getAudioFile(finalAudioFileName)
+                    finalWaveformData = waveformExtractor.extractWaveform(importedFile, targetSampleCount = 200).getOrNull()
+                }
+            }
+            NoteSource.TEXT -> {
+                // No audio for text notes
+            }
+        }
+
         val note = RecordingNote(
-            id = id,
+            id = noteId,
             createdAtEpochMs = now,
             title = title,
-            audioFileName = audioFile.name,
+            audioFileName = finalAudioFileName,
             durationMs = durationMs,
-            source = NoteSource.RECORDED,
-            status = NoteStatus.NEW,
-            transcriptText = null,
-            summaryText = null,
+            source = source,
+            status = if (source == NoteSource.TEXT) NoteStatus.DONE else NoteStatus.NEW,
+            transcriptText = transcriptText,
+            summaryText = summaryText,
             errorMessage = null,
-            waveformData = waveformData,
+            waveformData = finalWaveformData,
             patientName = metadata.patientName,
             patientId = metadata.patientId,
             visitType = metadata.visitType,
@@ -119,15 +139,26 @@ class NotesRepository(
     }
     
     /**
+     * Create a new note for a recording.
+     * @deprecated Use [createNote] instead.
+     */
+    suspend fun createRecordedNote(
+        id: String,
+        title: String,
+        audioFile: File,
+        durationMs: Long? = null
+    ): RecordingNote {
+        return createNote(
+            title = title,
+            source = NoteSource.RECORDED,
+            audioFile = audioFile,
+            durationMs = durationMs
+        )
+    }
+    
+    /**
      * Create a new note for an imported audio file.
-     * This will copy the audio file into app storage and extract waveform data.
-     * 
-     * @param title Note title
-     * @param sourceUri Content URI of the imported audio
-     * @param extension File extension (e.g., "m4a", "mp3", "wav")
-     * @param durationMs Duration in milliseconds (optional)
-     * @return The created note
-     * @throws Exception if audio copy fails
+     * @deprecated Use [createNote] instead.
      */
     suspend fun createImportedNote(
         title: String,
@@ -135,42 +166,13 @@ class NotesRepository(
         extension: String = "m4a",
         durationMs: Long? = null
     ): RecordingNote {
-        val noteId = UUID.randomUUID().toString()
-        val now = System.currentTimeMillis()
-
-        val metadata = generateClinicalMetadata(noteId, now)
-        
-        // Copy the audio file into app storage
-        val audioFileName = audioFileManager.copyImportedAudio(sourceUri, noteId, extension)
-        val audioFile = audioFileManager.getAudioFile(audioFileName)
-        
-        // Extract waveform data from imported audio
-        val waveformData = waveformExtractor.extractWaveform(audioFile, targetSampleCount = 200)
-            .getOrNull()
-        
-        val note = RecordingNote(
-            id = noteId,
-            createdAtEpochMs = now,
+        return createNote(
             title = title,
-            audioFileName = audioFileName,
-            durationMs = durationMs,
             source = NoteSource.IMPORTED,
-            status = NoteStatus.NEW,
-            transcriptText = null,
-            summaryText = null,
-            errorMessage = null,
-            waveformData = waveformData,
-            patientName = metadata.patientName,
-            patientId = metadata.patientId,
-            visitType = metadata.visitType,
-            clinicianName = metadata.clinicianName,
-            department = metadata.department,
-            priority = metadata.priority,
-            tags = metadata.tags
+            audioUri = sourceUri,
+            audioExtension = extension,
+            durationMs = durationMs
         )
-        
-        dao.insert(note.toEntity())
-        return note
     }
     
     /**
@@ -200,7 +202,9 @@ class NotesRepository(
     suspend fun deleteNote(id: String) {
         val note = dao.getById(id)
         if (note != null) {
-            audioFileManager.deleteAudioFile(note.audioFileName)
+            if (note.audioFileName.isNotEmpty()) {
+                audioFileManager.deleteAudioFile(note.audioFileName)
+            }
             dao.deleteById(id)
         }
     }
@@ -236,6 +240,11 @@ class NotesRepository(
                     return@launch
                 }
                 
+                if (note.audioFileName.isEmpty()) {
+                    Log.w(TAG, "No audio file for transcription")
+                    return@launch
+                }
+
                 dao.updateStatus(noteId, NoteStatus.TRANSCRIBING.name, null)
                 
                 val audioFile = audioFileManager.getAudioFile(note.audioFileName)
